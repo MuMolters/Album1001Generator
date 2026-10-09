@@ -57,8 +57,7 @@ cards:
           action: call-service
           service: albums_generator.rate_album
           service_data:
-            project_identifier: '[[[ return entity.attributes.project_identifier; ]]]'
-            generated_album_id: '[[[ return entity.attributes.generated_album_id; ]]]'
+            select_entity_id: select.1001_albums_generator_album_om_te_beoordelen
             rating: 1
       - type: custom:button-card
         entity: select.1001_albums_generator_album_om_te_beoordelen
@@ -68,8 +67,7 @@ cards:
           action: call-service
           service: albums_generator.rate_album
           service_data:
-            project_identifier: '[[[ return entity.attributes.project_identifier; ]]]'
-            generated_album_id: '[[[ return entity.attributes.generated_album_id; ]]]'
+            select_entity_id: select.1001_albums_generator_album_om_te_beoordelen
             rating: 2
       - type: custom:button-card
         entity: select.1001_albums_generator_album_om_te_beoordelen
@@ -79,8 +77,7 @@ cards:
           action: call-service
           service: albums_generator.rate_album
           service_data:
-            project_identifier: '[[[ return entity.attributes.project_identifier; ]]]'
-            generated_album_id: '[[[ return entity.attributes.generated_album_id; ]]]'
+            select_entity_id: select.1001_albums_generator_album_om_te_beoordelen
             rating: 3
       - type: custom:button-card
         entity: select.1001_albums_generator_album_om_te_beoordelen
@@ -90,8 +87,7 @@ cards:
           action: call-service
           service: albums_generator.rate_album
           service_data:
-            project_identifier: '[[[ return entity.attributes.project_identifier; ]]]'
-            generated_album_id: '[[[ return entity.attributes.generated_album_id; ]]]'
+            select_entity_id: select.1001_albums_generator_album_om_te_beoordelen
             rating: 4
       - type: custom:button-card
         entity: select.1001_albums_generator_album_om_te_beoordelen
@@ -101,17 +97,19 @@ cards:
           action: call-service
           service: albums_generator.rate_album
           service_data:
-            project_identifier: '[[[ return entity.attributes.project_identifier; ]]]'
-            generated_album_id: '[[[ return entity.attributes.generated_album_id; ]]]'
+            select_entity_id: select.1001_albums_generator_album_om_te_beoordelen
             rating: 5
 ```
 
 Replace the select entity ID with the one shown in your Home Assistant entity
 registry. The list refreshes with project data and the selected album
 disappears after it is rated. The action also accepts optional review text.
-You can call `albums_generator.rate_album` from Developer Tools → Actions by
-providing the project identifier, a rating from 1 to 5, and optionally the
-generated album ID and review.
+The rating buttons pass the selector entity ID so the action reads its current
+selection and project directly; this avoids relying on a card to template
+dynamic service data. You can also call `albums_generator.rate_album` from
+Developer Tools → Actions by providing the project identifier, a rating from
+1 to 5, and either the generated album ID or the selector entity ID, plus
+optional review text. The selector entity ID alone supplies the project.
 
 The selected album's Spotify URL is available as the select entity's
 `spotify_url` attribute. To make a button-card open that album when tapped:

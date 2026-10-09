@@ -4,8 +4,8 @@ rate_album:
   fields:
     project_identifier:
       name: Project
-      description: The project name or sharer ID configured in this integration.
-      required: true
+      description: The configured project name or sharer ID. Not needed when an album selector entity is provided.
+      required: false
       example: my-project
       selector:
         text:
@@ -29,8 +29,16 @@ rate_album:
           multiline: true
     generated_album_id:
       name: Generated album
-      description: Optional ID of the selected unrated history entry.
+      description: ID of a specific unrated history entry. Use this or the album selector entity.
       required: false
       example: 619b15da569b793e8a4fd8fd
       selector:
         text:
+    select_entity_id:
+      name: Album selector entity
+      description: Entity ID of the album selector; rates its currently selected album.
+      required: false
+      example: select.1001_albums_generator_album_om_te_beoordelen
+      selector:
+        entity:
+          domain: select

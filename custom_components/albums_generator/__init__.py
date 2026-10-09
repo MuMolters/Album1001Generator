@@ -28,14 +28,68 @@ async def async_setup(
     """Register integration actions."""
 
     async def async_rate_album(call: ServiceCall) -> None:
-        project_identifier = call.data[CONF_PROJECT_IDENTIFIER]
+        project_identifier = call.data.get(CONF_PROJECT_IDENTIFIER)
+        generated_album_id = call.data.get("generated_album_id")
+        select_entity_id = call.data.get("select_entity_id")
+        if select_entity_id is not None:
+            selected_state = hass.states.get(select_entity_id)
+            if selected_state is None:
+                raise HomeAssistantError(
+                    f"Album selector '{select_entity_id}' was not found."
+                )
+
+            selected_project = selected_state.attributes.get(
+                CONF_PROJECT_IDENTIFIER
+            )
+            if not isinstance(selected_project, str):
+                raise HomeAssistantError(
+                    "The selected album selector has no project "
+                    "identifier."
+                )
+            if (
+                project_identifier is not None
+                and selected_project.casefold()
+                != project_identifier.casefold()
+            ):
+                raise HomeAssistantError(
+                    "The selected album does not belong to the "
+                    "specified project."
+                )
+            project_identifier = selected_project
+
+            selected_generated_id = selected_state.attributes.get(
+                "generated_album_id"
+            )
+            if not isinstance(selected_generated_id, str) or not (
+                selected_generated_id
+            ):
+                raise HomeAssistantError(
+                    "Choose an unrated album in the album selector "
+                    "before submitting a rating."
+                )
+            if (
+                generated_album_id is not None
+                and generated_album_id != selected_generated_id
+            ):
+                raise HomeAssistantError(
+                    "The provided album ID does not match the album "
+                    "selected in the selector."
+                )
+            generated_album_id = selected_generated_id
+
+        if not isinstance(project_identifier, str) or not (
+            project_identifier
+        ):
+            raise HomeAssistantError(
+                "Provide a project identifier or an album selector entity."
+            )
+
         coordinators = [
             coordinator
             for coordinator in hass.data.get(DOMAIN, {}).values()
             if coordinator.project_identifier.casefold()
             == project_identifier.casefold()
         ]
-
         if not coordinators:
             raise HomeAssistantError(
                 f"No configured project matches "
@@ -45,7 +99,7 @@ async def async_setup(
         await coordinators[0].async_rate_latest_album(
             call.data["rating"],
             call.data.get("notes", ""),
-            call.data.get("generated_album_id"),
+            generated_album_id,
         )
 
     hass.services.async_register(
@@ -54,7 +108,7 @@ async def async_setup(
         async_rate_album,
         schema=vol.Schema(
             {
-                vol.Required(CONF_PROJECT_IDENTIFIER): str,
+                vol.Optional(CONF_PROJECT_IDENTIFIER): str,
                 vol.Required("rating"): vol.All(
                     vol.Coerce(float),
                     vol.In((1, 2, 3, 4, 5)),
@@ -62,6 +116,7 @@ async def async_setup(
                 ),
                 vol.Optional("notes", default=""): str,
                 vol.Optional("generated_album_id"): str,
+                vol.Optional("select_entity_id"): str,
             }
         ),
     )
