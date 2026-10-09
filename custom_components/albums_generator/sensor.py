@@ -64,11 +64,12 @@ async def async_setup_entry(
         LeastFavoriteAlbumsSensor(coordinator),
         GenresSensor(coordinator),
         DecadesSensor(coordinator),
-        ControversialAlbumsSensor(coordinator),
+        TopRatedAlbumsSensor(coordinator),
+        BottomRatedAlbumsSensor(coordinator),
+        GenreListSensor(coordinator),
     ]
 
     async_add_entities(entities)
-
 
 class AlbumsGeneratorSensor(
     CoordinatorEntity[AlbumsGeneratorCoordinator],
@@ -522,40 +523,123 @@ class DecadesSensor(AlbumsGeneratorSensor):
         )
 
 
-class ControversialAlbumsSensor(AlbumsGeneratorSensor):
-    """Albums with the largest rating deviation."""
+class TopRatedAlbumsSensor(AlbumsGeneratorSensor):
+    """Top-rated albums list."""
 
-    _attr_icon = "mdi:scale-balance"
+    _attr_icon = "mdi:heart"
 
     def __init__(self, coordinator):
         super().__init__(
             coordinator,
-            SENSOR_CONTROVERSIAL_ALBUMS,
-            "Controversiële albums",
+            SENSOR_TOP_RATED_ALBUMS,
+            "Best beoordeelde albums",
         )
 
     @property
     def native_value(self):
-        """Return number of controversial albums."""
+        """Return number of top-rated albums."""
+        return len(self.ranked_albums(reverse=True))
+
+    @property
+    def extra_state_attributes(self):
+        """Return top-rated album list."""
+        albums = self.ranked_albums(reverse=True)
+
+        return {
+            ATTR_ALBUMS: [
+                album_attributes(album)
+                for album in albums[:20]
+            ]
+        }
+
+    def ranked_albums(self, reverse=False):
+        return sorted(
+            self.albums,
+            key=lambda album: get_rating(album) or 0,
+            reverse=reverse,
+        )
+
+
+class BottomRatedAlbumsSensor(AlbumsGeneratorSensor):
+    """Lowest-rated albums list."""
+
+    _attr_icon = "mdi:thumb-down"
+
+    def __init__(self, coordinator):
+        super().__init__(
+            coordinator,
+            SENSOR_BOTTOM_RATED_ALBUMS,
+            "Slechtst beoordeelde albums",
+        )
+
+    @property
+    def native_value(self):
+        """Return number of lowest-rated albums."""
         return len(self.ranked_albums())
 
     @property
     def extra_state_attributes(self):
-        """Return most controversial albums."""
+        """Return lowest-rated album list."""
+        albums = self.ranked_albums()
+
         return {
             ATTR_ALBUMS: [
                 album_attributes(album)
-                for album in self.ranked_albums()[:10]
+                for album in albums[:20]
             ]
         }
 
-    def ranked_albums(self):
+    def ranked_albums(self, reverse=False):
         return sorted(
             self.albums,
-            key=lambda album: get_controversy(album) or 0,
-            reverse=True,
+            key=lambda album: get_rating(album) or 999,
+            reverse=reverse,
         )
 
+
+class GenreListSensor(AlbumsGeneratorSensor):
+    """List of unique genres."""
+
+    _attr_icon = "mdi:music-box-multiple"
+
+    def __init__(self, coordinator):
+        super().__init__(
+            coordinator,
+            SENSOR_GENRE_LIST,
+            "Genres",
+        )
+
+    @property
+    def native_value(self):
+        """Return number of unique genres."""
+        return len(self.unique_genres())
+
+    @property
+    def extra_state_attributes(self):
+        """Return genre list."""
+        return {
+            "genres": self.unique_genres()
+        }
+
+    def unique_genres(self):
+        genres_set = set()
+
+        for album in self.albums:
+            genre = get_genre(album)
+
+            if not genre:
+                continue
+
+            if isinstance(genre, list):
+                for item in genre:
+                    if isinstance(item, str):
+                        genres_set.add(item.strip())
+            else:
+                for item in str(genre).split(","):
+                    if item.strip():
+                        genres_set.add(item.strip())
+
+        return sorted(list(genres_set))
 
 def get_current_album(
     project: dict[str, Any],
