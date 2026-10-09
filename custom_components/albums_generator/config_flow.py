@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import voluptuous as vol
 
 from homeassistant import config_entries
@@ -21,9 +23,12 @@ class AlbumsGeneratorConfigFlow(
 
     VERSION = 1
 
-    async def async_step_user(self, user_input=None):
+    async def async_step_user(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ):
         """Handle the initial setup step."""
-        errors = {}
+        errors: dict[str, str] = {}
 
         if user_input is not None:
             group_slug = self._normalize_slug(
@@ -37,24 +42,29 @@ class AlbumsGeneratorConfigFlow(
                 errors[CONF_GROUP_SLUG] = "invalid_group"
 
             elif not project_identifier:
-                errors[CONF_PROJECT_IDENTIFIER] = (
-                    "invalid_project"
-                )
+                errors[
+                    CONF_PROJECT_IDENTIFIER
+                ] = "invalid_project"
 
             else:
                 await self.async_set_unique_id(
-                    f"{group_slug}_{project_identifier.lower()}"
+                    f"{group_slug}_"
+                    f"{project_identifier.lower()}"
                 )
                 self._abort_if_unique_id_configured()
 
+                name = user_input.get(CONF_NAME) or (
+                    project_identifier
+                )
+
                 return self.async_create_entry(
-                    title=user_input.get(CONF_NAME)
-                    or project_identifier,
+                    title=name,
                     data={
-                        CONF_NAME: user_input.get(CONF_NAME)
-                        or project_identifier,
+                        CONF_NAME: name,
                         CONF_GROUP_SLUG: group_slug,
-                        CONF_PROJECT_IDENTIFIER: project_identifier,
+                        CONF_PROJECT_IDENTIFIER: (
+                            project_identifier
+                        ),
                     },
                 )
 
@@ -77,14 +87,11 @@ class AlbumsGeneratorConfigFlow(
 
     @staticmethod
     @callback
-    def async_get_options_flow(config_entry):
+    def async_get_options_flow(
+        config_entry: config_entries.ConfigEntry,
+    ):
         """Return the options flow."""
-        return AlbumsGeneratorOptionsFlow(config_entry)
-
-    @staticmethod
-    def _normalize_slug(value: str) -> str:
-        """Convert a group name to an API slug."""
-        return "-".join(value.strip().lower().split())
+        return AlbumsGeneratorOptionsFlow()
 
 
 class AlbumsGeneratorOptionsFlow(
@@ -92,10 +99,10 @@ class AlbumsGeneratorOptionsFlow(
 ):
     """Handle integration options."""
 
-    def __init__(self, config_entry):
-        self.config_entry = config_entry
-
-    async def async_step_init(self, user_input=None):
+    async def async_step_init(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ):
         """Manage options."""
         if user_input is not None:
             return self.async_create_entry(
@@ -103,9 +110,12 @@ class AlbumsGeneratorOptionsFlow(
                 data=user_input,
             )
 
-        schema = vol.Schema({})
-
         return self.async_show_form(
             step_id="init",
-            data_schema=schema,
+            data_schema=vol.Schema({}),
         )
+
+    @staticmethod
+    def _normalize_slug(value: str) -> str:
+        """Convert a group name to an API slug."""
+        return "-".join(value.strip().lower().split())
