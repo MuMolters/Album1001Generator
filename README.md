@@ -113,6 +113,19 @@ You can call `albums_generator.rate_album` from Developer Tools → Actions by
 providing the project identifier, a rating from 1 to 5, and optionally the
 generated album ID and review.
 
+The selected album's Spotify URL is available as the select entity's
+`spotify_url` attribute. To make a button-card open that album when tapped:
+
+```yaml
+type: custom:button-card
+entity: select.1001_albums_generator_album_om_te_beoordelen
+show_state: true
+tap_action:
+  action: url
+  url_path: |
+    [[[ return entity.attributes.spotify_url; ]]]
+```
+
 The `Favoriete albums` and `Minst favoriete albums` sensors list albums
 personally rated in this project. `Best beoordeelde albums` and
 `Slechtst beoordeelde albums` are the overall site rankings. Genre sensors

@@ -14,7 +14,12 @@ from .coordinator import (
     AlbumsGeneratorCoordinator,
     get_unrated_history_items,
 )
-from .sensor import get_album_title, get_artist, get_image_url
+from .sensor import (
+    get_album_title,
+    get_artist,
+    get_image_url,
+    get_spotify_url,
+)
 
 
 async def async_setup_entry(
@@ -93,6 +98,7 @@ class UnratedAlbumSelect(
             ),
             "album_id": album.get("uuid") or album.get("id"),
             "image_url": get_image_url(album),
+            "spotify_url": get_spotify_url(album),
         }
 
     async def async_select_option(self, option: str) -> None:
