@@ -1,0 +1,29 @@
+rate_album:
+  name: Rate latest album
+  description: Rate the latest generated album in a configured project.
+  fields:
+    project_identifier:
+      name: Project
+      description: The project name or sharer ID configured in this integration.
+      required: true
+      example: my-project
+      selector:
+        text:
+    rating:
+      name: Rating
+      description: Personal rating from 1 to 5.
+      required: true
+      example: 5
+      selector:
+        number:
+          min: 1
+          max: 5
+          step: 1
+          mode: slider
+    notes:
+      name: Review
+      description: Optional review text to send with the rating.
+      required: false
+      selector:
+        text:
+          multiline: true

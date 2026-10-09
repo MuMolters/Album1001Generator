@@ -45,7 +45,10 @@ from .const import (
     SENSOR_TOP_RATED_ALBUMS,
     SENSOR_TOTAL_ALBUMS,
 )
-from .coordinator import AlbumsGeneratorCoordinator
+from .coordinator import (
+    AlbumsGeneratorCoordinator,
+    get_latest_history_item,
+)
 
 
 async def async_setup_entry(
@@ -63,6 +66,7 @@ async def async_setup_entry(
         CompletionPercentageSensor(coordinator),
         AverageRatingSensor(coordinator),
         CurrentAlbumSensor(coordinator),
+        AlbumToRateSensor(coordinator),
         FavoriteAlbumsSensor(coordinator),
         LeastFavoriteAlbumsSensor(coordinator),
         GenresSensor(coordinator),
@@ -192,13 +196,13 @@ class TotalAlbumsSensor(AlbumsGeneratorSensor):
 
 
 class CompletedAlbumsSensor(AlbumsGeneratorSensor):
-    """Number of completed albums."""
+    """Number of personally rated albums."""
 
     def __init__(self, coordinator):
         super().__init__(
             coordinator,
             SENSOR_COMPLETED_ALBUMS,
-            "Beluisterde albums",
+            "Beoordeelde albums",
         )
 
     @property
@@ -206,14 +210,7 @@ class CompletedAlbumsSensor(AlbumsGeneratorSensor):
         """Return completed album count."""
         value = self._find_value(
             self.project_data,
-            (
-                "completedAlbums",
-                "completed_albums",
-                "ratedAlbums",
-                "rated_albums",
-                "generatedAlbums",
-                "generated_albums",
-            ),
+            ("ratedAlbums", "rated_albums"),
         )
 
         if isinstance(value, (int, float)):
@@ -225,7 +222,11 @@ class CompletedAlbumsSensor(AlbumsGeneratorSensor):
         )
 
         if isinstance(history, list):
-            return len(history)
+            return sum(
+                get_project_rating(item) is not None
+                for item in history
+                if isinstance(item, dict)
+            )
 
         return 0
 
@@ -375,6 +376,61 @@ class CurrentAlbumSensor(AlbumsGeneratorSensor):
             return {}
 
         return album_attributes(album)
+
+
+class AlbumToRateSensor(AlbumsGeneratorSensor):
+    """Latest generated album, ready for a personal rating."""
+
+    _attr_icon = "mdi:star-plus"
+
+    def __init__(self, coordinator):
+        super().__init__(
+            coordinator,
+            "album_to_rate",
+            "Album om te beoordelen",
+        )
+
+    @property
+    def history_item(self) -> dict[str, Any]:
+        """Return the latest generated album."""
+        item = get_latest_history_item(self.project_data)
+        return item if item is not None else {}
+
+    @property
+    def album(self) -> dict[str, Any]:
+        """Return album data from the latest history entry."""
+        value = self.history_item.get("album", self.history_item)
+        return value if isinstance(value, dict) else {}
+
+    @property
+    def native_value(self):
+        """Return the latest generated album title."""
+        return get_album_title(self.album) or "Geen album"
+
+    @property
+    def entity_picture(self) -> str | None:
+        """Return the latest generated album cover."""
+        return get_image_url(self.album)
+
+    @property
+    def extra_state_attributes(self):
+        """Return details used by the rating action."""
+        if not self.history_item:
+            return {}
+
+        return {
+            **album_attributes(self.album),
+            "project_identifier": (
+                self.coordinator.project_identifier
+            ),
+            "generated_album_id": (
+                self.history_item.get("generatedAlbumId")
+                or self.history_item.get("_id")
+            ),
+            "album_id": (
+                self.album.get("uuid") or self.album.get("id")
+            ),
+        }
 
 
 class FavoriteAlbumsSensor(AlbumsGeneratorSensor):

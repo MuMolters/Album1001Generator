@@ -10,6 +10,9 @@ DEFAULT_SCAN_INTERVAL = timedelta(hours=1)
 DEFAULT_TOTAL_ALBUMS = 1089
 
 API_BASE_URL = "https://1001albumsgenerator.com/api/v1"
+API_WRITE_BASE_URL = "https://1001albumsgenerator.com/api"
+
+SERVICE_RATE_ALBUM = "rate_album"
 
 ATTR_ALBUMS = "albums"
 ATTR_ARTIST = "artist"

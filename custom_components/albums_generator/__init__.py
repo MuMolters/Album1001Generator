@@ -1,13 +1,68 @@
 from __future__ import annotations
 
+import voluptuous as vol
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.typing import ConfigType
 
-from .const import DOMAIN
+from .const import (
+    CONF_PROJECT_IDENTIFIER,
+    DOMAIN,
+    SERVICE_RATE_ALBUM,
+)
 from .coordinator import AlbumsGeneratorCoordinator
 
 PLATFORMS: list[Platform] = [Platform.SENSOR]
+
+
+async def async_setup(
+    hass: HomeAssistant,
+    _config: ConfigType,
+) -> bool:
+    """Register integration actions."""
+
+    async def async_rate_album(call: ServiceCall) -> None:
+        project_identifier = call.data[CONF_PROJECT_IDENTIFIER]
+        coordinators = [
+            coordinator
+            for coordinator in hass.data.get(DOMAIN, {}).values()
+            if coordinator.project_identifier.casefold()
+            == project_identifier.casefold()
+        ]
+
+        if not coordinators:
+            raise HomeAssistantError(
+                f"No configured project matches "
+                f"'{project_identifier}'."
+            )
+
+        await coordinators[0].async_rate_latest_album(
+            call.data["rating"],
+            call.data.get("notes", ""),
+        )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_RATE_ALBUM,
+        async_rate_album,
+        schema=vol.Schema(
+            {
+                vol.Required(CONF_PROJECT_IDENTIFIER): str,
+                vol.Required("rating"): vol.All(
+                    vol.Coerce(float),
+                    vol.Range(min=1, max=5),
+                    vol.Any(1, 2, 3, 4, 5),
+                    vol.Coerce(int),
+                ),
+                vol.Optional("notes", default=""): str,
+            }
+        ),
+    )
+
+    return True
 
 
 async def async_setup_entry(

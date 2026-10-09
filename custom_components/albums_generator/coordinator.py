@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import logging
 from typing import Any
+from urllib.parse import quote
 
 import aiohttp
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
     UpdateFailed,
@@ -14,6 +16,7 @@ from homeassistant.helpers.update_coordinator import (
 
 from .const import (
     API_BASE_URL,
+    API_WRITE_BASE_URL,
     CONF_PROJECT_IDENTIFIER,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
@@ -102,6 +105,100 @@ class AlbumsGeneratorCoordinator(
                 f"Invalid JSON received from API: {error}"
             ) from error
 
+    async def async_rate_latest_album(
+        self,
+        rating: int,
+        notes: str = "",
+    ) -> None:
+        """Submit a rating for the latest generated album."""
+        history_item = get_latest_history_item(
+            self.data.get("project", {})
+        )
+        if history_item is None:
+            raise HomeAssistantError(
+                "There is no generated album available to rate."
+            )
+
+        album = history_item.get("album", history_item)
+        if not isinstance(album, dict):
+            raise HomeAssistantError(
+                "The latest history item has no album data."
+            )
+
+        album_id = album.get("uuid") or album.get("id")
+        generated_album_id = (
+            history_item.get("generatedAlbumId")
+            or history_item.get("_id")
+        )
+        if not isinstance(album_id, str) or not isinstance(
+            generated_album_id,
+            str,
+        ):
+            raise HomeAssistantError(
+                "The latest history item is missing rating IDs."
+            )
+
+        url = (
+            f"{API_WRITE_BASE_URL}/"
+            f"{quote(self.project_identifier, safe='')}/"
+            f"{quote(album_id, safe='')}/rate"
+        )
+        payload = {
+            "rating": rating,
+            "notes": notes,
+            "fromHistoryView": True,
+            "generatedAlbumId": generated_album_id,
+            "isUserAlbum": history_item.get("isUserAlbum", False)
+            is True,
+        }
+
+        try:
+            async with aiohttp.ClientSession(
+                timeout=aiohttp.ClientTimeout(total=30)
+            ) as session:
+                async with session.post(
+                    url,
+                    json=payload,
+                    headers={
+                        "Accept": "application/json",
+                        "User-Agent": (
+                            "Home Assistant 1001 Albums "
+                            "Generator integration"
+                        ),
+                    },
+                ) as response:
+                    response.raise_for_status()
+                    result = await response.json()
+
+            if not isinstance(result, dict):
+                raise HomeAssistantError(
+                    "The rating response had an unexpected format."
+                )
+            if result.get("success") is False or result.get("error"):
+                raise HomeAssistantError(
+                    "1001 Albums Generator rejected the rating: "
+                    f"{result.get('error', 'unknown error')}"
+                )
+
+        except aiohttp.ClientResponseError as error:
+            raise HomeAssistantError(
+                f"Rating request failed with HTTP {error.status}."
+            ) from error
+        except aiohttp.ClientError as error:
+            raise HomeAssistantError(
+                f"Could not send the rating: {error}"
+            ) from error
+        except TimeoutError as error:
+            raise HomeAssistantError(
+                "The rating request timed out."
+            ) from error
+        except ValueError as error:
+            raise HomeAssistantError(
+                "The rating response was not valid JSON."
+            ) from error
+
+        await self.async_request_refresh()
+
     @staticmethod
     async def _get_json(
         session: aiohttp.ClientSession,
@@ -165,3 +262,32 @@ class AlbumsGeneratorCoordinator(
                     return dict_items
 
         return []
+
+
+def get_latest_history_item(
+    project: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Return the latest generated album with the IDs needed to rate it."""
+    history = project.get("history")
+    if not isinstance(history, list):
+        return None
+
+    for item in reversed(history):
+        if not isinstance(item, dict):
+            continue
+
+        album = item.get("album", item)
+        if not isinstance(album, dict):
+            continue
+
+        album_id = album.get("uuid") or album.get("id")
+        generated_album_id = (
+            item.get("generatedAlbumId") or item.get("_id")
+        )
+        if isinstance(album_id, str) and isinstance(
+            generated_album_id,
+            str,
+        ):
+            return item
+
+    return None
