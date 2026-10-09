@@ -1,6 +1,6 @@
 rate_album:
-  name: Rate latest album
-  description: Rate the latest generated album in a configured project.
+  name: Rate project album
+  description: Rate an unrated generated album in a configured project.
   fields:
     project_identifier:
       name: Project
@@ -27,3 +27,10 @@ rate_album:
       selector:
         text:
           multiline: true
+    generated_album_id:
+      name: Generated album
+      description: Optional ID of the selected unrated history entry.
+      required: false
+      example: 619b15da569b793e8a4fd8fd
+      selector:
+        text:

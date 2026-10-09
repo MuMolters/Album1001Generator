@@ -15,7 +15,10 @@ from .const import (
 )
 from .coordinator import AlbumsGeneratorCoordinator
 
-PLATFORMS: list[Platform] = [Platform.SENSOR]
+PLATFORMS: list[Platform] = [
+    Platform.SELECT,
+    Platform.SENSOR,
+]
 
 
 async def async_setup(
@@ -42,6 +45,7 @@ async def async_setup(
         await coordinators[0].async_rate_latest_album(
             call.data["rating"],
             call.data.get("notes", ""),
+            call.data.get("generated_album_id"),
         )
 
     hass.services.async_register(
@@ -53,11 +57,11 @@ async def async_setup(
                 vol.Required(CONF_PROJECT_IDENTIFIER): str,
                 vol.Required("rating"): vol.All(
                     vol.Coerce(float),
-                    vol.Range(min=1, max=5),
-                    vol.Any(1, 2, 3, 4, 5),
+                    vol.In((1, 2, 3, 4, 5)),
                     vol.Coerce(int),
                 ),
                 vol.Optional("notes", default=""): str,
+                vol.Optional("generated_album_id"): str,
             }
         ),
     )

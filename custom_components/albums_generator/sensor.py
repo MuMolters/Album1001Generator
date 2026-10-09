@@ -38,8 +38,6 @@ from .const import (
     SENSOR_CURRENT_ALBUM,
     SENSOR_DECADES,
     SENSOR_FAVORITE_ALBUMS,
-    SENSOR_GENRE_LIST,
-    SENSOR_GENRES,
     SENSOR_LEAST_FAVORITE_ALBUMS,
     SENSOR_REMAINING_ALBUMS,
     SENSOR_TOP_RATED_ALBUMS,
@@ -48,6 +46,7 @@ from .const import (
 from .coordinator import (
     AlbumsGeneratorCoordinator,
     get_latest_history_item,
+    get_project_rating,
 )
 
 
@@ -69,11 +68,9 @@ async def async_setup_entry(
         AlbumToRateSensor(coordinator),
         FavoriteAlbumsSensor(coordinator),
         LeastFavoriteAlbumsSensor(coordinator),
-        GenresSensor(coordinator),
         DecadesSensor(coordinator),
         TopRatedAlbumsSensor(coordinator),
         BottomRatedAlbumsSensor(coordinator),
-        GenreListSensor(coordinator),
     ]
 
     async_add_entities(entities)
@@ -506,60 +503,6 @@ class LeastFavoriteAlbumsSensor(AlbumsGeneratorSensor):
         )
 
 
-class GenresSensor(AlbumsGeneratorSensor):
-    """Genre counts."""
-
-    _attr_icon = "mdi:music-box-multiple"
-
-    def __init__(self, coordinator):
-        super().__init__(
-            coordinator,
-            SENSOR_GENRES,
-            "Genres",
-        )
-
-    @property
-    def native_value(self):
-        """Return number of detected genres."""
-        return len(self.genre_counts())
-
-    @property
-    def extra_state_attributes(self):
-        """Return genre counts."""
-        return {
-            "genre_counts": self.genre_counts()
-        }
-
-    def genre_counts(self):
-        counts = {}
-
-        for album in self.albums:
-            genre = get_genre(album)
-
-            if not genre:
-                continue
-
-            if isinstance(genre, list):
-                genres = genre
-            else:
-                genres = [
-                    item.strip()
-                    for item in str(genre).split(",")
-                    if item.strip()
-                ]
-
-            for item in genres:
-                counts[item] = counts.get(item, 0) + 1
-
-        return dict(
-            sorted(
-                counts.items(),
-                key=lambda item: item[1],
-                reverse=True,
-            )
-        )
-
-
 class DecadesSensor(AlbumsGeneratorSensor):
     """Album counts per decade."""
 
@@ -637,8 +580,8 @@ class TopRatedAlbumsSensor(AlbumsGeneratorSensor):
 
     def ranked_albums(self, reverse=False):
         return sorted(
-            self.rated_project_albums,
-            key=lambda album: get_project_rating(album) or 0,
+            self.albums,
+            key=lambda album: get_rating(album) or 0,
             reverse=reverse,
         )
 
@@ -674,55 +617,11 @@ class BottomRatedAlbumsSensor(AlbumsGeneratorSensor):
 
     def ranked_albums(self, reverse=False):
         return sorted(
-            self.rated_project_albums,
-            key=lambda album: get_project_rating(album) or 0,
+            self.albums,
+            key=lambda album: get_rating(album) or 0,
             reverse=reverse,
         )
 
-
-class GenreListSensor(AlbumsGeneratorSensor):
-    """List of unique genres."""
-
-    _attr_icon = "mdi:music-box-multiple"
-
-    def __init__(self, coordinator):
-        super().__init__(
-            coordinator,
-            SENSOR_GENRE_LIST,
-            "Genres",
-        )
-
-    @property
-    def native_value(self):
-        """Return number of unique genres."""
-        return len(self.unique_genres())
-
-    @property
-    def extra_state_attributes(self):
-        """Return genre list."""
-        return {
-            "genres": self.unique_genres()
-        }
-
-    def unique_genres(self):
-        genres_set = set()
-
-        for album in self.albums:
-            genre = get_genre(album)
-
-            if not genre:
-                continue
-
-            if isinstance(genre, list):
-                for item in genre:
-                    if isinstance(item, str):
-                        genres_set.add(item.strip())
-            else:
-                for item in str(genre).split(","):
-                    if item.strip():
-                        genres_set.add(item.strip())
-
-        return sorted(list(genres_set))
 
 def get_current_album(
     project: dict[str, Any],
@@ -828,25 +727,6 @@ def get_rating(album: dict[str, Any]) -> float | None:
         "averageRating",
         "average_rating",
         "rating",
-        "score",
-    ):
-        value = album.get(key)
-
-        try:
-            if value is not None:
-                return float(value)
-        except (TypeError, ValueError):
-            continue
-
-    return None
-
-
-def get_project_rating(album: dict[str, Any]) -> float | None:
-    """Get an explicit personal rating from a project history item."""
-    for key in (
-        "rating",
-        "userRating",
-        "user_rating",
         "score",
     ):
         value = album.get(key)

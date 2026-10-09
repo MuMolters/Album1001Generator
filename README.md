@@ -34,76 +34,90 @@ tap_action:
 
 Replace `sensor.huidig_album` with the entity ID created by Home Assistant.
 
-### Rate yesterday's album from Home Assistant
+### Choose and rate any unrated album from Home Assistant
 
-The `sensor.album_om_te_beoordelen` entity shows the latest generated album in
-your project history (normally yesterday's album). Add five buttons to rate it
-from 1 to 5:
+The `select.1001_albums_generator_album_om_te_beoordelen` entity lists albums
+in your project history that do not have a personal rating. Add it to an
+Entities card so you can choose which album to rate, then add five buttons to
+submit a rating from 1 to 5:
 
 ```yaml
-type: horizontal-stack
+type: vertical-stack
 cards:
-  - type: custom:button-card
-    entity: sensor.album_om_te_beoordelen
-    name: "1"
-    show_state: false
-    tap_action:
-      action: call-service
-      service: albums_generator.rate_album
-      service_data:
-        project_identifier: '[[[ return entity.attributes.project_identifier; ]]]'
-        rating: 1
-  - type: custom:button-card
-    entity: sensor.album_om_te_beoordelen
-    name: "2"
-    show_state: false
-    tap_action:
-      action: call-service
-      service: albums_generator.rate_album
-      service_data:
-        project_identifier: '[[[ return entity.attributes.project_identifier; ]]]'
-        rating: 2
-  - type: custom:button-card
-    entity: sensor.album_om_te_beoordelen
-    name: "3"
-    show_state: false
-    tap_action:
-      action: call-service
-      service: albums_generator.rate_album
-      service_data:
-        project_identifier: '[[[ return entity.attributes.project_identifier; ]]]'
-        rating: 3
-  - type: custom:button-card
-    entity: sensor.album_om_te_beoordelen
-    name: "4"
-    show_state: false
-    tap_action:
-      action: call-service
-      service: albums_generator.rate_album
-      service_data:
-        project_identifier: '[[[ return entity.attributes.project_identifier; ]]]'
-        rating: 4
-  - type: custom:button-card
-    entity: sensor.album_om_te_beoordelen
-    name: "5"
-    show_state: false
-    tap_action:
-      action: call-service
-      service: albums_generator.rate_album
-      service_data:
-        project_identifier: '[[[ return entity.attributes.project_identifier; ]]]'
-        rating: 5
+  - type: entities
+    entities:
+      - entity: select.1001_albums_generator_album_om_te_beoordelen
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        entity: select.1001_albums_generator_album_om_te_beoordelen
+        name: "1"
+        show_state: false
+        tap_action:
+          action: call-service
+          service: albums_generator.rate_album
+          service_data:
+            project_identifier: '[[[ return entity.attributes.project_identifier; ]]]'
+            generated_album_id: '[[[ return entity.attributes.generated_album_id; ]]]'
+            rating: 1
+      - type: custom:button-card
+        entity: select.1001_albums_generator_album_om_te_beoordelen
+        name: "2"
+        show_state: false
+        tap_action:
+          action: call-service
+          service: albums_generator.rate_album
+          service_data:
+            project_identifier: '[[[ return entity.attributes.project_identifier; ]]]'
+            generated_album_id: '[[[ return entity.attributes.generated_album_id; ]]]'
+            rating: 2
+      - type: custom:button-card
+        entity: select.1001_albums_generator_album_om_te_beoordelen
+        name: "3"
+        show_state: false
+        tap_action:
+          action: call-service
+          service: albums_generator.rate_album
+          service_data:
+            project_identifier: '[[[ return entity.attributes.project_identifier; ]]]'
+            generated_album_id: '[[[ return entity.attributes.generated_album_id; ]]]'
+            rating: 3
+      - type: custom:button-card
+        entity: select.1001_albums_generator_album_om_te_beoordelen
+        name: "4"
+        show_state: false
+        tap_action:
+          action: call-service
+          service: albums_generator.rate_album
+          service_data:
+            project_identifier: '[[[ return entity.attributes.project_identifier; ]]]'
+            generated_album_id: '[[[ return entity.attributes.generated_album_id; ]]]'
+            rating: 4
+      - type: custom:button-card
+        entity: select.1001_albums_generator_album_om_te_beoordelen
+        name: "5"
+        show_state: false
+        tap_action:
+          action: call-service
+          service: albums_generator.rate_album
+          service_data:
+            project_identifier: '[[[ return entity.attributes.project_identifier; ]]]'
+            generated_album_id: '[[[ return entity.attributes.generated_album_id; ]]]'
+            rating: 5
 ```
 
-Each button submits a rating for the latest generated album in the selected
-project's history. The action refreshes the integration after the website
-accepts the rating. You can also call `albums_generator.rate_album` from
-Developer Tools → Actions, supplying the project identifier, a rating from 1
-to 5, and optional review text.
+Replace the select entity ID with the one shown in your Home Assistant entity
+registry. The list refreshes with project data and the selected album
+disappears after it is rated. The action also accepts optional review text.
+You can call `albums_generator.rate_album` from Developer Tools → Actions by
+providing the project identifier, a rating from 1 to 5, and optionally the
+generated album ID and review.
 
-The favorite and least-favorite sensors rank only albums in this project's
-history that have a personal rating. Their full rated lists are in the
-`albums` attribute. To display the list, you can use Markdown cards:
+The `Favoriete albums` and `Minst favoriete albums` sensors list albums
+personally rated in this project. `Best beoordeelde albums` and
+`Slechtst beoordeelde albums` are the overall site rankings. Genre sensors
+have been removed. The project favorite sensors' full lists are in the
+`albums` attribute. To display one with a Markdown card:
 
 ```yaml
 type: markdown

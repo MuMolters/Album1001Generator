@@ -109,14 +109,24 @@ class AlbumsGeneratorCoordinator(
         self,
         rating: int,
         notes: str = "",
+        generated_album_id: str | None = None,
     ) -> None:
-        """Submit a rating for the latest generated album."""
-        history_item = get_latest_history_item(
-            self.data.get("project", {})
-        )
+        """Submit a rating for an unrated project history album."""
+        project = self.data.get("project", {})
+        if generated_album_id is None:
+            history_item = get_latest_history_item(project)
+        else:
+            history_item = get_history_item_by_generated_id(
+                project,
+                generated_album_id,
+            )
         if history_item is None:
             raise HomeAssistantError(
-                "There is no generated album available to rate."
+                "The selected album is no longer available to rate."
+            )
+        if get_project_rating(history_item) is not None:
+            raise HomeAssistantError(
+                "The selected album has already been rated."
             )
 
         album = history_item.get("album", history_item)
@@ -267,13 +277,24 @@ class AlbumsGeneratorCoordinator(
 def get_latest_history_item(
     project: dict[str, Any],
 ) -> dict[str, Any] | None:
-    """Return the latest generated album with the IDs needed to rate it."""
+    """Return the latest unrated generated album with rateable IDs."""
+    unrated_items = get_unrated_history_items(project)
+    return unrated_items[0] if unrated_items else None
+
+
+def get_unrated_history_items(
+    project: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Return generated project history entries that have not been rated."""
     history = project.get("history")
     if not isinstance(history, list):
-        return None
+        return []
 
+    unrated_items = []
     for item in reversed(history):
         if not isinstance(item, dict):
+            continue
+        if item.get("revealedAlbum") is False:
             continue
 
         album = item.get("album", item)
@@ -287,7 +308,46 @@ def get_latest_history_item(
         if isinstance(album_id, str) and isinstance(
             generated_album_id,
             str,
-        ):
-            return item
+        ) and get_project_rating(item) is None:
+            unrated_items.append(item)
+
+    return unrated_items
+
+
+def get_history_item_by_generated_id(
+    project: dict[str, Any],
+    generated_album_id: str,
+) -> dict[str, Any] | None:
+    """Find an unrated history entry by its generation ID."""
+    return next(
+        (
+            item
+            for item in get_unrated_history_items(project)
+            if (
+                item.get("generatedAlbumId") or item.get("_id")
+            )
+            == generated_album_id
+        ),
+        None,
+    )
+
+
+def get_project_rating(
+    history_item: dict[str, Any],
+) -> float | None:
+    """Return a personal rating, never the site's global rating."""
+    album = history_item.get("album")
+    sources = [history_item]
+    if isinstance(album, dict):
+        sources.append(album)
+
+    for source in sources:
+        for key in ("rating", "userRating", "user_rating", "score"):
+            value = source.get(key)
+            try:
+                if value is not None:
+                    return float(value)
+            except (TypeError, ValueError):
+                continue
 
     return None
