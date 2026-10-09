@@ -1,0 +1,13 @@
+{
+  "domain": "albums_generator",
+  "name": "1001 Albums Generator",
+  "version": "0.1.0",
+  "documentation": "https://github.com/MuMolters/Album1001Generator",
+  "issue_tracker": "https://github.com/MuMolters/Album1001Generator/issues",
+  "codeowners": [
+    "@MuMolters"
+  ],
+  "config_flow": true,
+  "iot_class": "cloud_polling",
+  "requirements": []
+}

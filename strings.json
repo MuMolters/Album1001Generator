@@ -1,0 +1,27 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "1001 Albums Generator toevoegen",
+        "description": "Vul de gegevens van jouw groep en project in.",
+        "data": {
+          "name": "Naam",
+          "group_slug": "Groepnaam of group slug",
+          "project_identifier": "Projectnaam of project identifier"
+        },
+        "data_description": {
+          "name": "Naam van deze Home Assistant-integratie.",
+          "group_slug": "Bijvoorbeeld mijn-groep. Gebruik kleine letters en koppeltekens.",
+          "project_identifier": "De projectnaam of sharer ID uit 1001 Albums Generator."
+        }
+      }
+    },
+    "error": {
+      "invalid_group": "Vul een geldige groepsnaam in.",
+      "invalid_project": "Vul een geldige projectnaam of identifier in."
+    },
+    "abort": {
+      "already_configured": "Deze groep en dit project zijn al toegevoegd."
+    }
+  }
+}
