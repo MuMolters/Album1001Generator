@@ -22,7 +22,6 @@ from .const import (
     ATTR_CONTROVERSY,
     ATTR_DECADE,
     ATTR_GENRE,
-    ATTR_GROUP,
     ATTR_IMAGE_URL,
     ATTR_PROJECT,
     ATTR_RATING,
@@ -31,15 +30,18 @@ from .const import (
     ATTR_YEAR,
     DOMAIN,
     SENSOR_AVERAGE_RATING,
+    SENSOR_BOTTOM_RATED_ALBUMS,
     SENSOR_COMPLETED_ALBUMS,
     SENSOR_COMPLETION_PERCENTAGE,
     SENSOR_CONTROVERSIAL_ALBUMS,
     SENSOR_CURRENT_ALBUM,
     SENSOR_DECADES,
     SENSOR_FAVORITE_ALBUMS,
+    SENSOR_GENRE_LIST,
     SENSOR_GENRES,
     SENSOR_LEAST_FAVORITE_ALBUMS,
     SENSOR_REMAINING_ALBUMS,
+    SENSOR_TOP_RATED_ALBUMS,
     SENSOR_TOTAL_ALBUMS,
 )
 from .coordinator import AlbumsGeneratorCoordinator
@@ -105,12 +107,6 @@ class AlbumsGeneratorSensor(
             "manufacturer": "1001 Albums Generator",
             "model": "API",
         }
-
-    @property
-    def group_data(self) -> dict[str, Any]:
-        """Return group data."""
-        value = self.coordinator.data.get(ATTR_GROUP, {})
-        return value if isinstance(value, dict) else {}
 
     @property
     def project_data(self) -> dict[str, Any]:
@@ -336,20 +332,20 @@ class CurrentAlbumSensor(AlbumsGeneratorSensor):
     @property
     def native_value(self):
         """Return the current album title."""
-        album = get_current_album(
-            self.project_data,
-            self.group_data,
-        )
+        album = get_current_album(self.project_data)
 
         return get_album_title(album) or "Onbekend album"
 
     @property
+    def entity_picture(self) -> str | None:
+        """Return the current album cover URL."""
+        album = get_current_album(self.project_data)
+        return get_image_url(album)
+
+    @property
     def extra_state_attributes(self):
         """Return current album details."""
-        album = get_current_album(
-            self.project_data,
-            self.group_data,
-        )
+        album = get_current_album(self.project_data)
 
         if not album:
             return {}
@@ -371,8 +367,10 @@ class FavoriteAlbumsSensor(AlbumsGeneratorSensor):
 
     @property
     def native_value(self):
-        """Return number of favorite albums."""
-        return len(self.ranked_albums(reverse=True))
+        """Return a readable list of the highest-rated albums."""
+        return album_list_state(
+            self.ranked_albums(reverse=True)[:10]
+        )
 
     @property
     def extra_state_attributes(self):
@@ -406,8 +404,8 @@ class LeastFavoriteAlbumsSensor(AlbumsGeneratorSensor):
 
     @property
     def native_value(self):
-        """Return number of albums."""
-        return len(self.albums)
+        """Return a readable list of the lowest-rated albums."""
+        return album_list_state(self.ranked_albums()[:10])
 
     @property
     def extra_state_attributes(self):
@@ -537,8 +535,10 @@ class TopRatedAlbumsSensor(AlbumsGeneratorSensor):
 
     @property
     def native_value(self):
-        """Return number of top-rated albums."""
-        return len(self.ranked_albums(reverse=True))
+        """Return a readable list of the highest-rated albums."""
+        return album_list_state(
+            self.ranked_albums(reverse=True)[:20]
+        )
 
     @property
     def extra_state_attributes(self):
@@ -574,8 +574,8 @@ class BottomRatedAlbumsSensor(AlbumsGeneratorSensor):
 
     @property
     def native_value(self):
-        """Return number of lowest-rated albums."""
-        return len(self.ranked_albums())
+        """Return a readable list of the lowest-rated albums."""
+        return album_list_state(self.ranked_albums()[:20])
 
     @property
     def extra_state_attributes(self):
@@ -643,20 +643,18 @@ class GenreListSensor(AlbumsGeneratorSensor):
 
 def get_current_album(
     project: dict[str, Any],
-    group: dict[str, Any],
 ) -> dict[str, Any]:
     """Find the current album."""
-    for source in (project, group):
-        for key in (
-            "currentAlbum",
-            "current_album",
-            "albumOfTheDay",
-            "album_of_the_day",
-        ):
-            value = source.get(key)
+    for key in (
+        "currentAlbum",
+        "current_album",
+        "albumOfTheDay",
+        "album_of_the_day",
+    ):
+        value = project.get(key)
 
-            if isinstance(value, dict):
-                return value
+        if isinstance(value, dict):
+            return value
 
     return {}
 
@@ -869,3 +867,39 @@ def album_attributes(
         for key, value in values.items()
         if value is not None
     }
+
+
+def album_list_state(albums: list[dict[str, Any]]) -> str:
+    """Format album titles for a sensor state within HA's state limit."""
+    titles = [
+        get_album_title(album) or "Onbekend album"
+        for album in albums
+    ]
+
+    if not titles:
+        return "Geen albums"
+
+    state = ""
+
+    for index, title in enumerate(titles):
+        separator = " | " if state else ""
+        remaining = len(titles) - index - 1
+        suffix = f" ... (+{remaining})" if remaining else ""
+        candidate = f"{state}{separator}{title}{suffix}"
+
+        if len(candidate) > 255:
+            if not state:
+                if not remaining:
+                    return f"{title[:252]}..."
+
+                suffix = f" ... (+{remaining})"
+                return (
+                    f"{title[:255 - len(suffix)]}{suffix}"
+                )
+
+            suffix = f" ... (+{remaining + 1})"
+            return f"{state[:255 - len(suffix)]}{suffix}"
+
+        state = f"{state}{separator}{title}"
+
+    return state

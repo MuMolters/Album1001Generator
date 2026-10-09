@@ -12,5 +12,41 @@ Integration to show your 1001 Albums Generator stats in Home Assistant.
 
 ## Configuration
 
-- Group slug: your group name (lowercase, with dashes)
-- Project identifier: your project name or sharer ID
+Enter the project name or sharer ID. A group slug is not required.
+
+## Dashboard cards
+
+The current album sensor provides `image_url` and `spotify_url` attributes and
+uses the cover as its entity picture. With the [button-card](https://github.com/custom-cards/button-card)
+custom card, you can show the cover and open that album on Spotify:
+
+```yaml
+type: custom:button-card
+entity: sensor.huidig_album
+show_entity_picture: true
+show_name: false
+show_state: true
+entity_picture: |
+  [[[ return entity.attributes.image_url; ]]]
+tap_action:
+  action: url
+  url_path: |
+    [[[ return entity.attributes.spotify_url; ]]]
+```
+
+Replace `sensor.huidig_album` with the entity ID created by Home Assistant.
+The favorite and least-favorite sensors expose their ranked albums in the
+`albums` attribute. To display the full list, you can use Markdown cards:
+
+```yaml
+type: markdown
+content: |
+  ## Favorite albums
+  {% for album in state_attr('sensor.favoriete_albums', 'albums') or [] %}
+  - **{{ album.album_title }}** — {{ album.artist }} ({{ album.rating }})
+  {% endfor %}
+```
+
+Use `sensor.minst_favoriete_albums` and change the heading to show the
+least-favorite albums. Replace the example entity IDs with the IDs in your
+Home Assistant instance.

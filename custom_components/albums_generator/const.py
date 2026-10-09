@@ -4,7 +4,6 @@ from datetime import timedelta
 
 DOMAIN = "albums_generator"
 
-CONF_GROUP_SLUG = "group_slug"
 CONF_PROJECT_IDENTIFIER = "project_identifier"
 
 DEFAULT_SCAN_INTERVAL = timedelta(hours=1)
@@ -24,7 +23,6 @@ ATTR_VOTES = "votes"
 ATTR_DECADE = "decade"
 ATTR_CONTROVERSY = "controversy"
 ATTR_PROJECT = "project"
-ATTR_GROUP = "group"
 
 SENSOR_TOTAL_ALBUMS = "total_albums"
 SENSOR_COMPLETED_ALBUMS = "completed_albums"

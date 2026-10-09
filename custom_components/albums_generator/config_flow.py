@@ -5,11 +5,9 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.const import CONF_NAME
 from homeassistant.core import callback
 
 from .const import (
-    CONF_GROUP_SLUG,
     CONF_PROJECT_IDENTIFIER,
     DOMAIN,
 )
@@ -31,37 +29,24 @@ class AlbumsGeneratorConfigFlow(
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            group_slug = self._normalize_slug(
-                user_input[CONF_GROUP_SLUG]
-            )
             project_identifier = user_input[
                 CONF_PROJECT_IDENTIFIER
             ].strip()
 
-            if not group_slug:
-                errors[CONF_GROUP_SLUG] = "invalid_group"
-
-            elif not project_identifier:
+            if not project_identifier:
                 errors[
                     CONF_PROJECT_IDENTIFIER
                 ] = "invalid_project"
 
             else:
                 await self.async_set_unique_id(
-                    f"{group_slug}_"
-                    f"{project_identifier.lower()}"
+                    project_identifier.lower()
                 )
                 self._abort_if_unique_id_configured()
 
-                name = user_input.get(CONF_NAME) or (
-                    project_identifier
-                )
-
                 return self.async_create_entry(
-                    title=name,
+                    title=project_identifier,
                     data={
-                        CONF_NAME: name,
-                        CONF_GROUP_SLUG: group_slug,
                         CONF_PROJECT_IDENTIFIER: (
                             project_identifier
                         ),
@@ -70,11 +55,6 @@ class AlbumsGeneratorConfigFlow(
 
         schema = vol.Schema(
             {
-                vol.Required(
-                    CONF_NAME,
-                    default="1001 Albums Generator",
-                ): str,
-                vol.Required(CONF_GROUP_SLUG): str,
                 vol.Required(CONF_PROJECT_IDENTIFIER): str,
             }
         )
@@ -114,8 +94,3 @@ class AlbumsGeneratorOptionsFlow(
             step_id="init",
             data_schema=vol.Schema({}),
         )
-
-    @staticmethod
-    def _normalize_slug(value: str) -> str:
-        """Convert a group name to an API slug."""
-        return "-".join(value.strip().lower().split())

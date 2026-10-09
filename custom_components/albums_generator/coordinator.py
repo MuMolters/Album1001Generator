@@ -14,7 +14,6 @@ from homeassistant.helpers.update_coordinator import (
 
 from .const import (
     API_BASE_URL,
-    CONF_GROUP_SLUG,
     CONF_PROJECT_IDENTIFIER,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
@@ -34,7 +33,6 @@ class AlbumsGeneratorCoordinator(
         entry: ConfigEntry,
     ) -> None:
         self.entry = entry
-        self.group_slug = entry.data[CONF_GROUP_SLUG]
         self.project_identifier = entry.data[
             CONF_PROJECT_IDENTIFIER
         ]
@@ -48,9 +46,6 @@ class AlbumsGeneratorCoordinator(
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch all API data."""
-        group_url = (
-            f"{API_BASE_URL}/groups/{self.group_slug}"
-        )
         project_url = (
             f"{API_BASE_URL}/projects/"
             f"{self.project_identifier}"
@@ -63,10 +58,6 @@ class AlbumsGeneratorCoordinator(
             async with aiohttp.ClientSession(
                 timeout=timeout
             ) as session:
-                group_data = await self._get_json(
-                    session,
-                    group_url,
-                )
                 project_data = await self._get_json(
                     session,
                     project_url,
@@ -75,9 +66,7 @@ class AlbumsGeneratorCoordinator(
                     session,
                     albums_url,
                 )
-
             data = {
-                "group": group_data,
                 "project": project_data,
                 "albums": self._extract_album_list(albums_data),
                 "raw_albums": albums_data,
@@ -86,7 +75,6 @@ class AlbumsGeneratorCoordinator(
             _LOGGER.debug(
                 "1001 Albums Generator data received: %s",
                 {
-                    "group_type": type(group_data).__name__,
                     "project_type": type(project_data).__name__,
                     "album_count": len(data["albums"]),
                 },
