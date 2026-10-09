@@ -28,6 +28,7 @@ from .const import (
     ATTR_SPOTIFY_URL,
     ATTR_VOTES,
     ATTR_YEAR,
+    DEFAULT_TOTAL_ALBUMS,
     DOMAIN,
     SENSOR_AVERAGE_RATING,
     SENSOR_BOTTOM_RATED_ALBUMS,
@@ -120,6 +121,34 @@ class AlbumsGeneratorSensor(
         value = self.coordinator.data.get(ATTR_ALBUMS, [])
         return value if isinstance(value, list) else []
 
+    @property
+    def rated_project_albums(self) -> list[dict[str, Any]]:
+        """Return this project's albums with a personal rating."""
+        history = self.project_data.get("history", [])
+        if not isinstance(history, list):
+            return []
+
+        albums = []
+        for history_item in history:
+            if not isinstance(history_item, dict):
+                continue
+
+            album = history_item.get("album", history_item)
+            if not isinstance(album, dict):
+                continue
+
+            rating = get_project_rating(history_item)
+            if rating is None:
+                rating = get_project_rating(album)
+            if rating is None:
+                continue
+
+            project_album = dict(album)
+            project_album["rating"] = rating
+            albums.append(project_album)
+
+        return albums
+
 
 class TotalAlbumsSensor(AlbumsGeneratorSensor):
     """Total number of albums."""
@@ -145,9 +174,13 @@ class TotalAlbumsSensor(AlbumsGeneratorSensor):
         )
 
         if isinstance(value, (int, float)):
-            return int(value)
+            return max(
+                int(value),
+                DEFAULT_TOTAL_ALBUMS,
+                len(self.albums),
+            )
 
-        return 1001
+        return max(DEFAULT_TOTAL_ALBUMS, len(self.albums))
 
     @staticmethod
     def _find_value(data, keys):
@@ -218,24 +251,15 @@ class RemainingAlbumsSensor(AlbumsGeneratorSensor):
     @property
     def native_value(self):
         """Return remaining album count."""
-        total = TotalAlbumsSensor._find_value(
-            self.project_data,
-            (
-                "totalAlbums",
-                "total_albums",
-                "albumCount",
-                "total",
-            ),
-        )
-
         completed = CompletedAlbumsSensor(
             self.coordinator
         ).native_value
 
-        if not isinstance(total, (int, float)):
-            total = 1001
-
-        return max(int(total) - int(completed), 0)
+        return max(
+            int(TotalAlbumsSensor(self.coordinator).native_value)
+            - int(completed),
+            0,
+        )
 
 
 class CompletionPercentageSensor(AlbumsGeneratorSensor):
@@ -384,8 +408,8 @@ class FavoriteAlbumsSensor(AlbumsGeneratorSensor):
 
     def ranked_albums(self, reverse=False):
         return sorted(
-            self.albums,
-            key=lambda album: get_rating(album) or 0,
+            self.rated_project_albums,
+            key=lambda album: get_project_rating(album) or 0,
             reverse=reverse,
         )
 
@@ -410,10 +434,7 @@ class LeastFavoriteAlbumsSensor(AlbumsGeneratorSensor):
     @property
     def extra_state_attributes(self):
         """Return least favorite album list."""
-        albums = sorted(
-            self.albums,
-            key=lambda album: get_rating(album) or 999,
-        )
+        albums = self.ranked_albums()
 
         return {
             ATTR_ALBUMS: [
@@ -421,6 +442,12 @@ class LeastFavoriteAlbumsSensor(AlbumsGeneratorSensor):
                 for album in albums[:10]
             ]
         }
+
+    def ranked_albums(self):
+        return sorted(
+            self.rated_project_albums,
+            key=lambda album: get_project_rating(album) or 0,
+        )
 
 
 class GenresSensor(AlbumsGeneratorSensor):
@@ -554,8 +581,8 @@ class TopRatedAlbumsSensor(AlbumsGeneratorSensor):
 
     def ranked_albums(self, reverse=False):
         return sorted(
-            self.albums,
-            key=lambda album: get_rating(album) or 0,
+            self.rated_project_albums,
+            key=lambda album: get_project_rating(album) or 0,
             reverse=reverse,
         )
 
@@ -591,8 +618,8 @@ class BottomRatedAlbumsSensor(AlbumsGeneratorSensor):
 
     def ranked_albums(self, reverse=False):
         return sorted(
-            self.albums,
-            key=lambda album: get_rating(album) or 999,
+            self.rated_project_albums,
+            key=lambda album: get_project_rating(album) or 0,
             reverse=reverse,
         )
 
@@ -758,6 +785,25 @@ def get_rating(album: dict[str, Any]) -> float | None:
     return None
 
 
+def get_project_rating(album: dict[str, Any]) -> float | None:
+    """Get an explicit personal rating from a project history item."""
+    for key in (
+        "rating",
+        "userRating",
+        "user_rating",
+        "score",
+    ):
+        value = album.get(key)
+
+        try:
+            if value is not None:
+                return float(value)
+        except (TypeError, ValueError):
+            continue
+
+    return None
+
+
 def get_votes(album: dict[str, Any]) -> int | None:
     """Get vote count."""
     for key in (
@@ -797,8 +843,17 @@ def get_spotify_url(
     if isinstance(links, dict):
         value = links.get("spotify")
 
-        if isinstance(value, str):
+        if isinstance(value, str) and value.startswith("http"):
             return value
+
+    spotify_id = album.get("spotifyId") or album.get(
+        "spotify_id"
+    )
+    if isinstance(spotify_id, str) and spotify_id.strip():
+        return (
+            "https://open.spotify.com/album/"
+            f"{spotify_id.strip()}"
+        )
 
     return None
 
@@ -819,6 +874,26 @@ def get_image_url(
 
         if isinstance(value, str) and value.startswith("http"):
             return value
+
+    images = album.get("images")
+    if isinstance(images, list):
+        image_urls = [
+            image
+            for image in images
+            if isinstance(image, dict)
+            and isinstance(image.get("url"), str)
+            and image["url"].startswith("http")
+        ]
+        if image_urls:
+            image_urls.sort(
+                key=lambda image: (
+                    image.get("width", 0)
+                    if isinstance(image.get("width"), (int, float))
+                    else 0
+                ),
+                reverse=True,
+            )
+            return image_urls[0]["url"]
 
     return None
 

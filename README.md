@@ -26,8 +26,6 @@ entity: sensor.huidig_album
 show_entity_picture: true
 show_name: false
 show_state: true
-entity_picture: |
-  [[[ return entity.attributes.image_url; ]]]
 tap_action:
   action: url
   url_path: |
@@ -35,8 +33,9 @@ tap_action:
 ```
 
 Replace `sensor.huidig_album` with the entity ID created by Home Assistant.
-The favorite and least-favorite sensors expose their ranked albums in the
-`albums` attribute. To display the full list, you can use Markdown cards:
+The favorite and least-favorite sensors rank only albums in this project's
+history that have a personal rating. Their full rated lists are in the
+`albums` attribute. To display the list, you can use Markdown cards:
 
 ```yaml
 type: markdown

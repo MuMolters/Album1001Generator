@@ -7,6 +7,7 @@ DOMAIN = "albums_generator"
 CONF_PROJECT_IDENTIFIER = "project_identifier"
 
 DEFAULT_SCAN_INTERVAL = timedelta(hours=1)
+DEFAULT_TOTAL_ALBUMS = 1089
 
 API_BASE_URL = "https://1001albumsgenerator.com/api/v1"
 
