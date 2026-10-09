@@ -372,7 +372,14 @@ class CurrentAlbumSensor(AlbumsGeneratorSensor):
         if not album:
             return {}
 
-        return album_attributes(album)
+        album_stats = get_matching_album_stats(album, self.albums)
+        album = {**album_stats, **album}
+        attributes = album_attributes(album)
+        rating = get_rating(album)
+        if rating is not None:
+            attributes[ATTR_AVERAGE_RATING] = rating
+
+        return attributes
 
 
 class AlbumToRateSensor(AlbumsGeneratorSensor):
@@ -637,6 +644,31 @@ def get_current_album(
 
         if isinstance(value, dict):
             return value
+
+    return {}
+
+
+def get_matching_album_stats(
+    album: dict[str, Any],
+    albums: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Find global statistics for an album by its Spotify ID."""
+    album_ids = {
+        album.get(key)
+        for key in ("spotifyId", "spotify_id", "id")
+        if isinstance(album.get(key), str)
+    }
+    if not album_ids:
+        return {}
+
+    for album_stats in albums:
+        stats_ids = {
+            album_stats.get(key)
+            for key in ("spotifyId", "spotify_id", "id")
+            if isinstance(album_stats.get(key), str)
+        }
+        if album_ids & stats_ids:
+            return album_stats
 
     return {}
 
