@@ -294,8 +294,6 @@ def get_unrated_history_items(
     for item in reversed(history):
         if not isinstance(item, dict):
             continue
-        if item.get("revealedAlbum") is False:
-            continue
 
         album = item.get("album", item)
         if not isinstance(album, dict):
