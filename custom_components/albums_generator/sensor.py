@@ -960,7 +960,7 @@ def album_list_state(albums: list[dict[str, Any]]) -> str:
     return state
 
 class GroupStatsSensor(AlbumsGeneratorSensor):
-    """Group statistics."""
+    """Show whether optional group data is available."""
 
     _attr_icon = "mdi:account-group"
 
@@ -973,115 +973,31 @@ class GroupStatsSensor(AlbumsGeneratorSensor):
 
     @property
     def native_value(self):
-        """Return group name or member count."""
-        name = self._find_value(
-            self.group_data,
-            (
-                "name",
-                "groupName",
-                "group_name",
-            ),
-        )
+        data = self.coordinator.data or {}
 
-        if isinstance(name, str) and name.strip():
-            return name.strip()
+        if not data.get("group_configured", False):
+            return "Niet ingesteld"
 
-        members = self._find_value(
-            self.group_data,
-            (
-                "members",
-                "memberCount",
-                "member_count",
-                "users",
-            ),
-        )
+        if data.get("group_error"):
+            return "Ophalen mislukt"
 
-        if isinstance(members, list):
-            return f"{len(members)} leden"
+        if self.group_data:
+            return "Ontvangen"
 
-        if isinstance(members, (int, float)):
-            return f"{int(members)} leden"
-
-        return "Onbekende groep"
+        return "Geen groepsdata"
 
     @property
     def extra_state_attributes(self):
-        """Return group statistics."""
+        data = self.coordinator.data or {}
+
         return {
-            ATTR_GROUP_NAME: self._find_value(
-                self.group_data,
-                (
-                    "name",
-                    "groupName",
-                    "group_name",
-                ),
+            "group_slug": self.coordinator.group_slug,
+            "group_configured": data.get(
+                "group_configured",
+                False,
             ),
-            ATTR_GROUP_MEMBERS: self._member_count(),
-            ATTR_GROUP_AVERAGE_RATING: self._find_value(
-                self.group_data,
-                (
-                    "averageRating",
-                    "average_rating",
-                    "averageScore",
-                    "average_score",
-                ),
+            "group_error": data.get("group_error"),
+            "response_keys": sorted(
+                self.group_data.keys()
             ),
-            ATTR_GROUP_TOTAL_VOTES: self._find_value(
-                self.group_data,
-                (
-                    "votes",
-                    "totalVotes",
-                    "total_votes",
-                    "voteCount",
-                    "vote_count",
-                ),
-            ),
-            ATTR_GROUP_COMPLETED_ALBUMS: self._find_value(
-                self.group_data,
-                (
-                    "completedAlbums",
-                    "completed_albums",
-                    "ratedAlbums",
-                    "rated_albums",
-                ),
-            ),
-            ATTR_GROUP_CURRENT_ALBUM: self._current_group_album(),
         }
-
-    def _member_count(self):
-        members = self._find_value(
-            self.group_data,
-            (
-                "members",
-                "memberCount",
-                "member_count",
-                "users",
-            ),
-        )
-
-        if isinstance(members, list):
-            return len(members)
-
-        if isinstance(members, (int, float)):
-            return int(members)
-
-        return None
-
-    def _current_group_album(self):
-        album = get_current_album(
-            self.project_data,
-            self.group_data,
-        )
-
-        return get_album_title(album)
-
-    @staticmethod
-    def _find_value(data, keys):
-        if not isinstance(data, dict):
-            return None
-
-        for key in keys:
-            if key in data:
-                return data[key]
-
-        return None

@@ -39,6 +39,9 @@ class AlbumsGeneratorCoordinator(
         self.project_identifier = entry.data[
             CONF_PROJECT_IDENTIFIER
         ]
+        self.group_slug = (
+            entry.data.get(CONF_GROUP_SLUG) or ""
+        ).strip()
 
         super().__init__(
             hass,
@@ -55,6 +58,10 @@ class AlbumsGeneratorCoordinator(
         )
         albums_url = f"{API_BASE_URL}/albums/stats"
 
+        group_url = (
+            f"{API_BASE_URL}/groups/{self.group_slug}"
+)
+
         timeout = aiohttp.ClientTimeout(total=30)
 
         try:
@@ -65,15 +72,41 @@ class AlbumsGeneratorCoordinator(
                     session,
                     project_url,
                 )
+
                 albums_data = await self._get_json(
                     session,
                     albums_url,
                 )
+
+                group_data = {}
+                group_error = None
+
+                if self.group_slug:
+                    try:
+                        group_data = await self._get_json(
+                            session,
+                            group_url,
+                        )
+                    except (
+                        aiohttp.ClientError,
+                        TimeoutError,
+                        ValueError,
+                    ) as error:
+                        group_error = str(error)
+
+                        _LOGGER.warning(
+                            "Could not retrieve group %s: %s",
+                            self.group_slug,
+                            error,
+                        )
             data = {
-                "project": project_data,
-                "albums": self._extract_album_list(albums_data),
-                "raw_albums": albums_data,
-            }
+                    "group": group_data,
+                    "group_configured": bool(self.group_slug),
+                    "group_error": group_error,
+                    "project": project_data,
+                    "albums": self._extract_album_list(albums_data),
+                    "raw_albums": albums_data,
+                }
 
             _LOGGER.debug(
                 "1001 Albums Generator data received: %s",

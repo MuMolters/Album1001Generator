@@ -5,6 +5,7 @@ from datetime import timedelta
 DOMAIN = "albums_generator"
 
 CONF_PROJECT_IDENTIFIER = "project_identifier"
+CONF_GROUP_SLUG = "group_slug"
 
 DEFAULT_SCAN_INTERVAL = timedelta(hours=1)
 DEFAULT_TOTAL_ALBUMS = 1089

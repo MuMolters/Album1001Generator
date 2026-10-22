@@ -1,6 +1,15 @@
 {
   "config": {
     "step": {
+      "reconfigure": {
+        "title": "Groep wijzigen",
+        "description": "Vul een groepsnaam in of maak het veld leeg als je geen groep gebruikt. Laat het project ongewijzigd.",
+        "data": {
+          "name": "Naam",
+          "project_identifier": "Projectnaam of project identifier",
+          "group_slug": "Groepsnaam of group slug, optioneel"
+        }
+      },
       "user": {
         "title": "1001 Albums Generator toevoegen",
         "description": "Vul de projectnaam of projectidentifier van 1001 Albums Generator in.",
@@ -13,7 +22,8 @@
       }
     },
     "error": {
-      "invalid_project": "Vul een geldige projectnaam of identifier in."
+      "invalid_project": "Vul een geldige projectnaam of identifier in.",
+      "project_change_not_allowed": "Laat het project ongewijzigd. Voeg voor een ander project een nieuwe integratie toe."
     },
     "abort": {
       "already_configured": "Dit project is al toegevoegd."
