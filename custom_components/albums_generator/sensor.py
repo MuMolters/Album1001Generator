@@ -43,6 +43,17 @@ from .const import (
     SENSOR_TOP_RATED_ALBUMS,
     SENSOR_TOTAL_ALBUMS,
 )
+
+from .const import (
+    SENSOR_GROUP_STATS,
+    ATTR_GROUP_NAME,
+    ATTR_GROUP_MEMBERS,
+    ATTR_GROUP_AVERAGE_RATING,
+    ATTR_GROUP_TOTAL_VOTES,
+    ATTR_GROUP_COMPLETED_ALBUMS,
+    ATTR_GROUP_CURRENT_ALBUM,
+)
+
 from .coordinator import (
     AlbumsGeneratorCoordinator,
     get_latest_history_item,
