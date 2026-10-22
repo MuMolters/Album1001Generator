@@ -40,3 +40,12 @@ SENSOR_DECADES = "decades"
 SENSOR_CONTROVERSIAL_ALBUMS = "controversial_albums"
 SENSOR_TOP_RATED_ALBUMS = "top_rated_albums"
 SENSOR_BOTTOM_RATED_ALBUMS = "bottom_rated_albums"
+
+SENSOR_GROUP_STATS = "group_stats"
+
+ATTR_GROUP_NAME = "group_name"
+ATTR_GROUP_MEMBERS = "group_members"
+ATTR_GROUP_AVERAGE_RATING = "group_average_rating"
+ATTR_GROUP_TOTAL_VOTES = "group_total_votes"
+ATTR_GROUP_COMPLETED_ALBUMS = "group_completed_albums"
+ATTR_GROUP_CURRENT_ALBUM = "group_current_album"
