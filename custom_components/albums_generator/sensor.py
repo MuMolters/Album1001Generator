@@ -127,6 +127,13 @@ class AlbumsGeneratorSensor(
         """Return project data."""
         value = self.coordinator.data.get(ATTR_PROJECT, {})
         return value if isinstance(value, dict) else {}
+    
+    @property
+    def group_data(self) -> dict[str, Any]:
+        """Return the group response as a dictionary."""
+        data = self.coordinator.data or {}
+        value = data.get("group", {})
+        return value if isinstance(value, dict) else {}
 
     @property
     def albums(self) -> list[dict[str, Any]]:
@@ -960,7 +967,7 @@ def album_list_state(albums: list[dict[str, Any]]) -> str:
     return state
 
 class GroupStatsSensor(AlbumsGeneratorSensor):
-    """Show whether optional group data is available."""
+    """Expose statistics from the configured group."""
 
     _attr_icon = "mdi:account-group"
 
@@ -973,6 +980,7 @@ class GroupStatsSensor(AlbumsGeneratorSensor):
 
     @property
     def native_value(self):
+        """Return the group name or its connection status."""
         data = self.coordinator.data or {}
 
         if not data.get("group_configured", False):
@@ -981,14 +989,31 @@ class GroupStatsSensor(AlbumsGeneratorSensor):
         if data.get("group_error"):
             return "Ophalen mislukt"
 
-        if self.group_data:
-            return "Ontvangen"
+        group = self.group_data
+        if not group:
+            return "Geen groepsdata"
 
-        return "Geen groepsdata"
+        name = group.get("name")
+        if isinstance(name, str) and name.strip():
+            return name.strip()
+
+        return self.coordinator.group_slug
 
     @property
     def extra_state_attributes(self):
+        """Expose group statistics without guessing nested fields."""
         data = self.coordinator.data or {}
+        group = self.group_data
+
+        members = group.get("members")
+        member_count = None
+
+        if isinstance(members, list):
+            member_count = len(members)
+        elif isinstance(members, int) and not isinstance(
+            members, bool
+        ):
+            member_count = members
 
         return {
             "group_slug": self.coordinator.group_slug,
@@ -997,7 +1022,24 @@ class GroupStatsSensor(AlbumsGeneratorSensor):
                 False,
             ),
             "group_error": data.get("group_error"),
-            "response_keys": sorted(
-                self.group_data.keys()
+
+            "group_name": group.get("name"),
+            "group_members": member_count,
+            "group_average_rating": group.get("averageRating"),
+            "group_total_votes": group.get("totalVotes"),
+            "group_generated_albums": group.get(
+                "numberOfGeneratedAlbums"
             ),
+
+            "favorite_genres": group.get("favoriteGenres"),
+            "worst_genres": group.get("worstGenres"),
+            "rating_by_decade": group.get("ratingByDecade"),
+            "update_frequency": group.get("updateFrequency"),
+            "highest_rated_albums": group.get("highestRatedAlbums"),
+            "lowest_rated_albums": group.get("lowestRatedAlbums"),
+
+            # Keep these small album objects unchanged until
+            # their structure has been inspected.
+            "current_album": group.get("currentAlbum"),
+            "latest_album": group.get("latestAlbum"),
         }
