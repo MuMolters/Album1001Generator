@@ -4,15 +4,51 @@ Integration to show your 1001 Albums Generator stats in Home Assistant.
 
 ## Installation
 
-1. Install via HACS
-2. Search for 1001 Albums Generator
-3. Click Install
-4. Restart Home Assistant
-5. Add integration via Settings → Devices & Services
+### HACS
+
+If 1001 Albums Generator is not listed in HACS yet, add this repository as a
+custom repository first:
+
+1. In Home Assistant, open **HACS → Integrations**.
+2. Open the menu in the upper-right corner and choose **Custom repositories**.
+3. Add `https://github.com/MuMolters/Album1001Generator` and select
+   **Integration** as the category.
+4. Search for **1001 Albums Generator** in HACS and install it.
+5. Restart Home Assistant.
+6. Open **Settings → Devices & services → Add integration**, search for
+   **1001 Albums Generator**, and select it.
+
+### Manual installation
+
+Copy the `custom_components/albums_generator` directory from this repository
+to the `custom_components` directory in your Home Assistant configuration
+directory. Create `custom_components` if it does not exist. The resulting
+directory should be:
+
+```text
+<Home Assistant configuration directory>/custom_components/albums_generator/
+```
+
+Restart Home Assistant, then add the integration from
+**Settings → Devices & services → Add integration**.
 
 ## Configuration
 
-Enter the project name or sharer ID. A group slug is not required.
+The setup form contains these fields:
+
+- **Name**: The display name for this integration entry. It defaults to
+  `1001 Albums Generator`; you can leave that default or choose another name.
+- **Project name or project identifier**: Enter the project name or sharer ID
+  used by your 1001 Albums Generator project. Use the value for the project
+  whose albums and ratings you want to show in Home Assistant.
+- **Group name or group slug (optional)**: Leave this empty if you do not use a
+  group. If you do, enter the group's name or slug to enable the group's
+  statistics.
+
+Add a separate integration entry for each project. A project can only be added
+once. To change the group later, open the integration's menu under
+**Settings → Devices & services** and choose **Reconfigure**; the project
+identifier cannot be changed on an existing entry.
 
 ## Dashboard cards
 
