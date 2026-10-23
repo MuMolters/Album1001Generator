@@ -52,23 +52,39 @@ identifier cannot be changed on an existing entry.
 
 ## Dashboard cards
 
-The current album sensor provides `image_url` and `spotify_url` attributes and
-uses the cover as its entity picture. With the [button-card](https://github.com/custom-cards/button-card)
-custom card, you can show the cover and open that album on Spotify:
+Add these cards to your dashboard to show the current album and your project
+statistics. The album card uses the [button-card](https://github.com/custom-cards/button-card)
+custom card to show the cover and open the album on Spotify:
 
 ```yaml
 type: custom:button-card
-entity: sensor.huidig_album
+entity: sensor.1001_albums_generator_huidig_album
 show_entity_picture: true
 show_name: false
 show_state: true
+entity_picture: |
+  [[[ return entity.attributes.image_url; ]]]
 tap_action:
   action: url
   url_path: |
     [[[ return entity.attributes.spotify_url; ]]]
 ```
 
-Replace `sensor.huidig_album` with the entity ID created by Home Assistant.
+Place this Entities card below it to show the project statistics:
+
+```yaml
+type: entities
+title: Statistieken
+entities:
+  - entity: sensor.1001_albums_generator_totaal_aantal_albums
+  - entity: sensor.1001_albums_generator_beoordeelde_albums
+  - entity: sensor.1001_albums_generator_albums_te_gaan
+  - entity: sensor.1001_albums_generator_voortgang
+  - entity: sensor.1001_albums_generator_gemiddelde_beoordeling
+```
+
+If you have renamed the integration or entities, replace these example entity
+IDs with the IDs shown in your Home Assistant entity registry.
 
 ### Choose and rate any unrated album from Home Assistant
 
